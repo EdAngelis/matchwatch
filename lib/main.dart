@@ -1,7 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const WearCountersApp());
+}
+
+class MessageSender {
+  static const MethodChannel _channel = MethodChannel('wear/counter_channel');
+
+  static Future<void> sendMessage(String message) async {
+    try {
+      await _channel.invokeMethod('sendMessage', {'message': message});
+    } catch (e) {
+      print('Failed to send message: $e');
+    }
+  }
+}
+
+class MessageReceiver {
+  static const MethodChannel _channel = MethodChannel('wear/counter_channel');
+
+  static void initialize() {
+    _channel.setMethodCallHandler((call) async {
+      print("Received message from native: ${call.method}");
+      if (call.method == "onMessageReceived") {
+        final String message = call.arguments as String;
+        print("Message received from native: $message");
+        // Handle the message (e.g., update the UI or state)
+      }
+    });
+  }
 }
 
 class WearCountersApp extends StatelessWidget {
@@ -9,6 +37,8 @@ class WearCountersApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    MessageReceiver.initialize(); // Initialize the message receiver
+    print("WearCountersApp initialized");
     return MaterialApp(
       title: 'Wear OS Counters',
       theme: ThemeData.dark(),
@@ -31,10 +61,12 @@ class _DualCounterScreenState extends State<DualCounterScreen> {
 
   void _incrementLeft() {
     setState(() => counterA++);
+    MessageSender.sendMessage("1");
   }
 
   void _incrementRight() {
     setState(() => counterB++);
+    MessageSender.sendMessage("0");
   }
 
   @override
